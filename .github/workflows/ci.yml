@@ -1,0 +1,19 @@
+name: Build and Test CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build the Docker image
+        run: docker build ./backend --file ./backend/Dockerfile --tag my-backend:latest
