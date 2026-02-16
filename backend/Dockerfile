@@ -1,23 +1,19 @@
-# Step 1: Use an official Node.js runtime as the base image
-FROM node:18-slim
+# Stage 1: Build & Patch
+FROM node:18-slim AS builder
+WORKDIR /app
+COPY package*.json ./
+# Install and fix vulnerabilities during the build
+RUN npm install && npm audit fix --force
 
-# NEW: Update the OS packages to patch known vulnerabilities
+# Stage 2: Production Image
+FROM node:18-slim
+# Apply OS patches
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
-# Step 2: Set the working directory inside the container
 WORKDIR /app
-
-# Step 3: Copy package files 
-COPY package*.json ./
-
-# NEW: Use 'npm audit fix' to automatically update vulnerable sub-dependencies
-RUN npm install && npm audit fix 
-
-# Step 4: Copy the rest of your app's code
+# Only copy the patched node_modules from the builder stage
+COPY --from=builder /app/node_modules ./node_modules
 COPY . .
 
-# Step 5: Expose the port the app runs on
 EXPOSE 3000
-
-# Step 6: Define the command to run the app
 CMD ["node", "index.js"]
