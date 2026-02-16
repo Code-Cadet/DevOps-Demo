@@ -7,9 +7,11 @@ RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 # Step 2: Set the working directory inside the container
 WORKDIR /app
 
-# Step 3: Copy package files and install dependencies
+# Step 3: Copy package files 
 COPY package*.json ./
-RUN npm install
+
+# NEW: Use 'npm audit fix' to automatically update vulnerable sub-dependencies
+RUN npm install && npm audit fix 
 
 # Step 4: Copy the rest of your app's code
 COPY . .
