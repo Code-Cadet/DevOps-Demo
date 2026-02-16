@@ -1,6 +1,9 @@
 # Step 1: Use an official Node.js runtime as the base image
 FROM node:18-slim
 
+# NEW: Update the OS packages to patch known vulnerabilities
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
 # Step 2: Set the working directory inside the container
 WORKDIR /app
 
