@@ -2,10 +2,12 @@
 FROM node:18-slim AS builder
 WORKDIR /app
 COPY package*.json ./
-# Install and fix vulnerabilities during the build
-RUN npm install && npm audit fix --force
+# Force update global npm and install dependencies with a fresh audit
+RUN npm install -g npm@latest && \
+    npm install && \
+    npm audit fix --force
 
-# Stage 2: Production Image
+    # Stage 2: Production Image
 FROM node:18-slim
 # Apply OS patches
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
