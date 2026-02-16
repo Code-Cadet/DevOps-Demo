@@ -1,5 +1,5 @@
 # Stage 1: Build & Patch
-FROM node:18-slim AS builder
+FROM node:22-slim AS builder
 WORKDIR /app
 COPY package*.json ./
 # Force update global npm and install dependencies with a fresh audit
@@ -8,7 +8,7 @@ RUN npm install -g npm@latest && \
     npm audit fix --force
 
     # Stage 2: Production Image
-FROM node:18-slim
+FROM node:22-slim
 # Apply OS patches
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
