@@ -1,24 +1,25 @@
-# Stage 1: Build
-FROM node:22-slim AS builder
-WORKDIR /app
-COPY package*.json ./
-# Install only what we need
-RUN npm install --only=production && npm audit fix --force
-
-# Stage 2: Production Hardening
+# Use Node 22 slim directly
 FROM node:22-slim
-# Patch OS-level vulnerabilities
+
+# 1. Security: Patch OS vulnerabilities
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
+# 2. Set the working directory
 WORKDIR /app
-# Copy the clean modules from the builder
-COPY --from=builder /app/node_modules ./node_modules
+
+# 3. Copy package files and install dependencies
+# We do this before COPY . . to take advantage of Docker layer caching correctly
+COPY package*.json ./
+RUN npm install --only=production && npm audit fix --force
+
+# 4. Copy the rest of the application code
 COPY . .
 
-# SECURITY HARDENING: Remove npm/npx as they aren't needed at runtime
-# This removes the vulnerable 'tar' and 'glob' packages found in the logs
-RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+# 5. Security: Change ownership to the 'node' user
+RUN chown -R node:node /app
+
+# 6. Switch to the non-root user
+USER node
 
 EXPOSE 3000
-# Run the app directly with node
 CMD ["node", "index.js"]
