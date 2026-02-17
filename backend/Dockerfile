@@ -1,27 +1,40 @@
-FROM node:22-alpine
+# Stage 1: Build stage with security updates
+FROM node:22-slim AS builder
 
-# 1. Install security updates (Alpine uses apk)
-RUN apk update && apk upgrade && rm -rf /var/cache/apk/*
+# 1. Update OS packages
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
-# 2. Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
-
-# 3. Create app directory
+# 2. Set working directory
 WORKDIR /app
 
-# 4. Copy package files
+# 3. Copy package files
 COPY package*.json ./
 
-# 5. Install dependencies with security fixes
+# 4. Install dependencies with security fixes
 RUN npm ci --only=production && \
-    npm install tar@^7.5.7 glob@^11.1.0 diff@^8.0.3 --save
+    npm install tar@^7.5.7 glob@^11.1.0 diff@^8.0.3 --save && \
+    npm audit fix --force
 
-# 6. Copy application code
+# 5. Copy application code
 COPY . .
 
-# 7. Switch to non-root user (Alpine has 'node' user)
+# Stage 2: Production stage (smaller, more secure)
+FROM node:22-slim
+
+# 1. Security updates in final image
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+
+# 2. Create app directory
+WORKDIR /app
+
+# 3. Copy only necessary files from builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/*.js ./
+
+# 4. Switch to non-root user
 USER node
 
-# 8. Use dumb-init to handle signals properly
+# 5. Expose port and run
 EXPOSE 3000
-CMD ["dumb-init", "node", "index.js"]
+CMD ["node", "index.js"]
