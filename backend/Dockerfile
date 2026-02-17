@@ -3,11 +3,12 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production && \
+
+# Switch from 'ci' to 'install' to allow the version overrides
+RUN npm install --omit=dev && \
     npm install tar@^7.5.7 glob@^11.1.0 diff@^8.0.3 --save
 
 COPY . .
-
 # Production stage - Google's distroless (no shell, minimal attack surface)
 FROM gcr.io/distroless/nodejs22-debian12
 
