@@ -1,25 +1,27 @@
-# Use Node 22 slim directly
-FROM node:22-slim
+FROM node:22-alpine
 
-# 1. Security: Patch OS vulnerabilities
-RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+# 1. Install security updates (Alpine uses apk)
+RUN apk update && apk upgrade && rm -rf /var/cache/apk/*
 
-# 2. Set the working directory
+# 2. Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# 3. Create app directory
 WORKDIR /app
 
-# 3. Copy package files and install dependencies
-# We do this before COPY . . to take advantage of Docker layer caching correctly
+# 4. Copy package files
 COPY package*.json ./
-RUN npm install --only=production && npm audit fix --force
 
-# 4. Copy the rest of the application code
+# 5. Install dependencies with security fixes
+RUN npm ci --only=production && \
+    npm install tar@^7.5.7 glob@^11.1.0 diff@^8.0.3 --save
+
+# 6. Copy application code
 COPY . .
 
-# 5. Security: Change ownership to the 'node' user
-RUN chown -R node:node /app
-
-# 6. Switch to the non-root user
+# 7. Switch to non-root user (Alpine has 'node' user)
 USER node
 
+# 8. Use dumb-init to handle signals properly
 EXPOSE 3000
-CMD ["node", "index.js"]
+CMD ["dumb-init", "node", "index.js"]
