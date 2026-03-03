@@ -1,36 +1,45 @@
 const express = require('express');
 const app = express();
-const port = process.env.PORT || 3000;
 
-// Middleware for JSON parsing
+const PORT = process.env.PORT || 3000;
+const DB_PASSWORD = process.env.DATABASE_PASSWORD || 'default_password';
+
 app.use(express.json());
 
-// Health check endpoint for Kubernetes liveness probe
-app.get('/healthz', (req, res) => {
-  res.status(200).json({ status: 'healthy' });
-});
-
-// Readiness check endpoint for Kubernetes readiness probe
-app.get('/ready', (req, res) => {
-  // Add any readiness checks here (e.g., database connectivity)
-  res.status(200).json({ status: 'ready' });
-});
-
-// Root endpoint
+// Root endpoint - API information
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'DevOps Demo Backend API',
     version: '1.0.0',
-    environment: process.env.NODE_ENV || 'development'
+    endpoints: {
+      health: '/healthz',
+      ready: '/ready',
+      status: '/api/status'
+    }
   });
 });
 
-// Sample API endpoint
+// Health check endpoint
+app.get('/healthz', (req, res) => {
+  res.json({ status: 'healthy' });
+});
+
+// Readiness check endpoint
+app.get('/ready', (req, res) => {
+  res.json({ status: 'ready' });
+});
+
+// Status endpoint with system info
 app.get('/api/status', (req, res) => {
   res.json({
+    status: 'running',
     uptime: process.uptime(),
-    timestamp: Date.now(),
-    database: process.env.DATABASE_PASSWORD ? 'configured' : 'not configured'
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    database: {
+      configured: !!DB_PASSWORD,
+      passwordLength: DB_PASSWORD.length
+    }
   });
 });
 
@@ -40,18 +49,29 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-const server = app.listen(port, '0.0.0.0', () => {
-  console.log(`Backend server running on http://localhost:${port}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
-    console.log('HTTP server closed');
-    process.exit(0);
+// Only start server if not being required by tests
+if (require.main === module) {
+  const server = app.listen(PORT, () => {
+    console.log(`Backend server running on http://localhost:${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
-});
+
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM signal received: closing HTTP server');
+    server.close(() => {
+      console.log('HTTP server closed');
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGINT', () => {
+    console.log('SIGINT signal received: closing HTTP server');
+    server.close(() => {
+      console.log('HTTP server closed');
+      process.exit(0);
+    });
+  });
+}
 
 module.exports = app;
