@@ -403,4 +403,3 @@ For issues or questions, please open a GitHub issue.
 
 ---
 
-**Built with ❤️ for DevOps demonstrations**

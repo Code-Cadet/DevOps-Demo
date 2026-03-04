@@ -1,0 +1,33 @@
+# Prometheus Configuration for DevOps Demo
+
+global:
+  scrape_interval: 15s        # How frequently to scrape targets
+  evaluation_interval: 15s    # How frequently to evaluate rules
+  scrape_timeout: 10s         # Timeout after which a scrape is considered failed
+
+# Alertmanager configuration (optional - can be added later)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: []
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          instance: 'prometheus'
+          environment: 'development'
+
+  # Backend API monitoring
+  - job_name: 'devops-demo-backend'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['backend:3000']
+        labels:
+          service: 'backend-api'
+          environment: 'development'
+          version: '1.0.0'

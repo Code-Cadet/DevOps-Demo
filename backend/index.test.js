@@ -57,4 +57,29 @@ describe('Backend API Tests', () => {
       expect(response.body.environment).toBe('test');
     });
   });
+
+  describe('GET /metrics', () => {
+    it('should return Prometheus metrics', async () => {
+      const response = await request(server)
+        .get('/metrics')
+        .expect(200);
+      
+      expect(response.text).toContain('# HELP');
+      expect(response.text).toContain('# TYPE');
+      expect(response.text).toContain('devops_demo_');
+      expect(response.headers['content-type']).toMatch(/^text\/plain/);
+    });
+
+    it('should include custom HTTP metrics', async () => {
+      // Make a request to generate metrics
+      await request(server).get('/healthz');
+      
+      const response = await request(server)
+        .get('/metrics')
+        .expect(200);
+      
+      expect(response.text).toContain('devops_demo_http_requests_total');
+      expect(response.text).toContain('devops_demo_http_request_duration_seconds');
+    });
+  });
 });
